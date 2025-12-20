@@ -1,15 +1,30 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getConfigByCode, getDefaults } from './configData';
 
 /**
- * CONFIGURATION
+ * Get configuration based on URL parameters or defaults
  */
-const CONFIG = {
-  greeting: "Happy Birthday Aisha",
-  message: "May Allah make your life bloom with more joy, color, sucess and endless happiness. Here is to a year of growing stronger and more beautiful.",
-  colors: {
-    ball: "#F472B6", // Pink-400
+const getConfig = (code, name) => {
+  if (code && name) {
+    const customConfig = getConfigByCode(code);
+    if (customConfig) {
+      return {
+        greeting: customConfig.greeting,
+        message: customConfig.message,
+        colors: { ball: "#F472B6" }
+      };
+    }
   }
+  
+  // Use defaults when no code/name or code not found
+  const defaults = getDefaults();
+  return {
+    greeting: defaults.greeting,
+    message: defaults.message,
+    colors: { ball: "#F472B6" }
+  };
 };
 
 /**
@@ -305,6 +320,10 @@ const GreetingArea = ({ show }) => {
  * MAIN APP COMPONENT
  */
 export default function BirthdayExperience() {
+  const { code, name } = useParams();
+  const decodedName = name ? decodeURIComponent(name) : null;
+  const CONFIG = getConfig(code, decodedName);
+  
   const [phase, setPhase] = useState('initial');
   const [targetX, setTargetX] = useState('50%');
 
