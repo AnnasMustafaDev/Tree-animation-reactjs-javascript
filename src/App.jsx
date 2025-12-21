@@ -32,7 +32,7 @@ const getConfig = (code, name) => {
  */
 const Background = () => {
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: -10, overflow: 'hidden', backgroundColor: 'black', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'hidden', backgroundColor: 'black', pointerEvents: 'none' }}>
       <style>{`
         @keyframes hue-rotate-anim {
           from { filter: hue-rotate(0deg); }
@@ -66,14 +66,8 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
     if (!isGrowing || !canvasRef.current || hasStarted.current) return;
     hasStarted.current = true;
 
-    // Safety Fallback: Force text to show after 8 seconds if animation hangs
-    const safetyTimer = setTimeout(() => {
-       console.log("Tree animation took too long, forcing text reveal.");
-       onTreeComplete();
-    }, 1000);
-
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     
     // Handle Retina displays for clearer lines
     const dpr = window.devicePixelRatio || 1;
@@ -82,11 +76,16 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
     ctx.scale(dpr, dpr);
     
     // Style for the canvas element itself to fit screen
-    canvas.style.width = `${window.innerWidth}px`;
-    canvas.style.height = `${window.innerHeight}px`;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    canvas.style.backgroundColor = 'transparent';
+    canvas.style.display = 'block';
 
+    // Use lighter mode for the glow effect without going white
     ctx.globalCompositeOperation = 'lighter';
-    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    // Clear only once at start with full transparency
+    ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
     const drawTree = (startX, startY, length, angle, depth, branchWidth) => {
       const rand = Math.random;
@@ -103,15 +102,17 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
       ctx.lineTo(endX, endY);
 
       if (depth <= 2) {
-        // Cherry Blossom Pink/White/Purple
-        const r = 255;
-        const g = ((rand() * 100) + 100) >> 0;
-        const b = ((rand() * 55) + 200) >> 0;
-        ctx.strokeStyle = `rgb(${r},${g},${b})`;
+        // Cherry Blossom Pink/White/Purple - reduced brightness
+        const r = 200 + rand() * 55;
+        const g = 100 + rand() * 100;
+        const b = 180 + rand() * 55;
+        ctx.strokeStyle = `rgb(${r >> 0},${g >> 0},${b >> 0})`;
       } else {
-        // Dark Glow
-        const r = ((rand() * 64) + 64) >> 0;
-        ctx.strokeStyle = `rgb(${r}, 40, ${((rand() * 40) + 40) >> 0})`;
+        // Darker branches
+        const r = 120 + rand() * 80;
+        const g = 60 + rand() * 40;
+        const b = 100 + rand() * 80;
+        ctx.strokeStyle = `rgb(${r >> 0}, ${g >> 0}, ${b >> 0})`;
       }
       ctx.stroke();
 
@@ -151,7 +152,7 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
             drawTree(endX, endY, newLength, newAngle, newDepth, nextBranchWidth);
             activeAnimations.current -= 1;
             if (activeAnimations.current === 0) {
-              clearTimeout(safetyTimer);
+              console.log("All tree animations complete");
               onTreeComplete();
             }
           }
@@ -174,6 +175,13 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
     );
     
     activeAnimations.current -= 1;
+
+    // Safety timeout - force text reveal after 8 seconds if animation hangs
+    const safetyTimer = setTimeout(() => {
+       console.log("Safety timer triggered - forcing text reveal");
+       onTreeComplete();
+    }, 8000);
+    
     return () => clearTimeout(safetyTimer);
 
   }, [isGrowing, onTreeComplete]);
@@ -181,7 +189,7 @@ const CanvasTree = ({ isGrowing, onTreeComplete }) => {
   return (
     <canvas 
       ref={canvasRef} 
-      style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, touchAction: 'none' }}
+      style={{ position: 'fixed', top: 0, left: 0, zIndex: 2, touchAction: 'none', backgroundColor: 'transparent' }}
     />
   );
 };
@@ -219,9 +227,9 @@ const TypewriterText = ({ text, startDelay, onComplete }) => {
 
 /**
  * COMPONENT: GreetingArea
- * Rewritten to use INLINE STYLES to guarantee visibility without Tailwind.
+ * 100% Inline Styles - No Tailwind dependency
  */
-const GreetingArea = ({ show }) => {
+const GreetingArea = ({ show, config }) => {
   const [showHeader, setShowHeader] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -241,18 +249,22 @@ const GreetingArea = ({ show }) => {
 
   return (
     <div style={{
-        position: 'absolute',
-        inset: 0,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
         alignItems: isMobile ? 'center' : 'flex-start',
-        paddingLeft: isMobile ? '0' : '3%',
-        paddingRight: isMobile ? '0' : '0',
+        paddingLeft: isMobile ? '0px' : '3%',
+        paddingRight: isMobile ? '0px' : '0px',
         paddingTop: isMobile ? '3%' : '8%',
-        paddingBottom: isMobile ? '0' : '0',
+        paddingBottom: '0px',
         pointerEvents: 'none',
-        zIndex: 50 // High Z-Index ensures it sits on top of canvas
+        zIndex: 50,
+        visibility: 'visible'
     }}>
       {/* Glass Panel */}
       <motion.div 
@@ -263,23 +275,27 @@ const GreetingArea = ({ show }) => {
             maxWidth: isMobile ? '200px' : '450px',
             padding: isMobile ? '12px' : '25px',
             borderRadius: '16px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             backdropFilter: 'blur(10px)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            textAlign: isMobile ? 'center' : 'left'
+            textAlign: isMobile ? 'center' : 'left',
+            pointerEvents: 'auto'
         }}
       >
         <div style={{ 
             fontFamily: 'Quicksand, sans-serif', 
-            fontSize: isMobile ? '0.6rem' : '1rem', 
-            lineHeight: isMobile ? '1.2' : '1.6', 
-            marginBottom: isMobile ? '0.5rem' : '1.25rem', 
-            color: '#fbcfe8', // Pink-100
-            textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            fontSize: isMobile ? '0.65rem' : '1rem', 
+            lineHeight: isMobile ? '1.3' : '1.7', 
+            marginBottom: isMobile ? '0.75rem' : '1.5rem', 
+            color: 'rgba(251, 207, 232, 1)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+            wordWrap: 'break-word',
+            whiteSpace: 'normal',
+            visibility: 'visible'
         }}>
             <TypewriterText 
-                text={CONFIG.message} 
+                text={config.message} 
                 startDelay={0.2}
                 onComplete={() => setShowHeader(true)}
             />
@@ -294,13 +310,15 @@ const GreetingArea = ({ show }) => {
                 <div style={{ width: '64px', height: '4px', backgroundColor: '#ec4899', borderRadius: '9999px', marginBottom: '1.5rem', boxShadow: '0 0 10px #ec4899' }} />
                 <h1 style={{ 
                     fontFamily: '"Dancing Script", cursive', 
-                    fontSize: isMobile ? '1.25rem' : '3.5rem', 
+                    fontSize: isMobile ? '1.5rem' : '3.5rem', 
                     fontWeight: 'bold', 
-                    color: '#f472b6', // Pink-400
-                    margin: 0,
-                    filter: 'drop-shadow(0 0 15px rgba(244,114,182,0.6))'
+                    color: 'rgb(244, 114, 182)',
+                    margin: '0px',
+                    filter: 'drop-shadow(0 0 15px rgba(244,114,182,0.7))',
+                    textShadow: '0 0 20px rgba(244,114,182,0.5)',
+                    visibility: 'visible'
                 }}>
-                    {CONFIG.greeting}
+                    {config.greeting}
                     <motion.span 
                         style={{ display: 'inline-block', marginLeft: '1rem' }}
                         animate={{ rotate: [0, 10, -10, 0] }}
@@ -348,14 +366,16 @@ export default function BirthdayExperience() {
   };
 
   const handleTreeComplete = useCallback(() => {
+    console.log("Tree animation complete, showing text in 500ms");
     // Small delay to ensure tree visuals settle before text pops
     setTimeout(() => {
-        setPhase(prev => (prev === 'text-reveal' ? prev : 'text-reveal'));
+        console.log("Setting phase to text-reveal");
+        setPhase('text-reveal');
     }, 500);
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'black', userSelect: 'none' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'black', userSelect: 'none' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@300;500;700&display=swap');
         body { margin: 0; padding: 0; background: black; }
@@ -363,85 +383,87 @@ export default function BirthdayExperience() {
 
       <Background />
 
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        
-        {/* Ball Drop Animation */}
-        <AnimatePresence>
-          {phase === 'dropping' && (
-            <motion.div
-              style={{ 
-                  position: 'absolute',
-                  zIndex: 20,
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  boxShadow: '0 0 25px rgba(244,114,182,0.9)',
-                  backgroundColor: CONFIG.colors.ball,
-                  bottom: '0', 
-                  left: targetX, 
-                  marginLeft: '-8px'
-              }}
-              initial={{ y: '-100vh', opacity: 1 }}
-              animate={{ y: '-2vh' }} 
-              exit={{ scale: 2, opacity: 0, duration: 0.5 }}
-              transition={{ 
-                type: "spring", 
-                damping: 20, 
-                stiffness: 100, 
-                mass: 1 
-              }}
-              onAnimationComplete={handleDropComplete}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Impact Flash */}
-        {phase === 'growing' && (
-            <motion.div 
-                style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: targetX,
-                    transform: 'translateX(-50%)',
-                    width: '160px',
-                    height: '160px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(236, 72, 153, 0.4)',
-                    filter: 'blur(60px)'
-                }}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 2.5, opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-            />
+      {/* Ball Drop Animation */}
+      <AnimatePresence>
+        {phase === 'dropping' && (
+          <motion.div
+            style={{ 
+                position: 'fixed',
+                zIndex: 20,
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                boxShadow: '0 0 25px rgba(244,114,182,0.9)',
+                backgroundColor: CONFIG.colors.ball,
+                bottom: '0', 
+                left: targetX, 
+                marginLeft: '-8px'
+            }}
+            initial={{ y: '-100vh', opacity: 1 }}
+            animate={{ y: '-2vh' }} 
+            exit={{ scale: 2, opacity: 0, duration: 0.5 }}
+            transition={{ 
+              type: "spring", 
+              damping: 20, 
+              stiffness: 100, 
+              mass: 1 
+            }}
+            onAnimationComplete={handleDropComplete}
+          />
         )}
+      </AnimatePresence>
 
-        {/* The Canvas Tree */}
-        <CanvasTree 
-            isGrowing={phase === 'growing' || phase === 'text-reveal'} 
-            onTreeComplete={handleTreeComplete}
-        />
+      {/* Impact Flash */}
+      {phase === 'growing' && (
+          <motion.div 
+              style={{
+                  position: 'fixed',
+                  bottom: 0,
+                  left: targetX,
+                  transform: 'translateX(-50%)',
+                  width: '160px',
+                  height: '160px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(236, 72, 153, 0.4)',
+                  filter: 'blur(60px)',
+                  zIndex: 5
+              }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 2.5, opacity: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+          />
+      )}
 
-        {/* Greeting Text Overlay */}
-        <GreetingArea show={phase === 'text-reveal'} />
+      {/* The Canvas Tree */}
+      <CanvasTree 
+          isGrowing={phase === 'growing' || phase === 'text-reveal'} 
+          onTreeComplete={handleTreeComplete}
+      />
 
-      </div>
+      {/* Greeting Text Overlay - High Z-Index */}
+      <GreetingArea show={phase === 'text-reveal'} config={CONFIG} />
       
       {phase === 'text-reveal' && (
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} transition={{ delay: 3 }}
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 0.5 }} 
+            transition={{ delay: 3, duration: 1 }}
             style={{
-                position: 'absolute',
+                position: 'fixed',
                 bottom: '1rem',
-                left: 0,
+                left: '0px',
+                right: '0px',
                 width: '100%',
                 textAlign: 'center',
                 fontSize: '0.75rem',
-                color: '#f9a8d4',
+                color: 'rgba(249, 168, 212, 1)',
                 fontWeight: 'bold',
                 textTransform: 'uppercase',
-                letterSpacing: '0.1em',
+                letterSpacing: '0.15em',
                 pointerEvents: 'none',
-                zIndex: 50
+                zIndex: 50,
+                fontFamily: 'Quicksand, sans-serif',
+                visibility: 'visible'
             }}
           >
             Cherry Blossom Night
