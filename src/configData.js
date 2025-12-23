@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY = 'birthdayConfigs';
-const DEFAULT_MESSAGE = 'May Allah make your life bloom with more joy, color, sucess and endless happiness. Here is to a year of growing stronger and more beautiful.';
+const DEFAULT_MESSAGE = 'May your life bloom with more joy, color, sucess and endless happiness. Here is to a year of growing stronger and more beautiful.';
 
 /**
  * Initialize storage with default data if empty
@@ -14,8 +14,8 @@ export const initializeStorage = () => {
     const defaultData = {
       configs: {
         '0055': {
-          name: 'Aisha',
-          greeting: 'Happy Birthday Aisha',
+          name: 'default',
+          greeting: 'Happy Birthday',
           message: DEFAULT_MESSAGE,
         },
       },
